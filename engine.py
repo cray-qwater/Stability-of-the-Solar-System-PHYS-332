@@ -1,5 +1,5 @@
 import numpy as np
-
+import matplotlib.pyplot as plt
 #Gravitational constant in astronomical units: AU^3 / (M_sun * yr^2)
 G = 4.0 * np.pi**2
 
@@ -17,7 +17,7 @@ class NBodySystem:
         self.v = np.array(velocities, dtype=np.float64)
         self.N = len(masses)
 
-    def get_accelerations(self, r_pos=None):
+    def accelerations(self, r_pos=None):
         """
         Calculates gravitational acceleration vectors for all bodies:
         a_i = G * sum_{j != i} m_j * (r_j - r_i) / |r_j - r_i|^3
@@ -78,19 +78,16 @@ class NBodySystem:
         return np.sum(L_individual, axis=0)
     
     def leapfrog(self, dt):
-        """
-        2nd-order Symplectic Leapfrog (Kick-Drift-Kick).
-        Advances system positions and velocities by step size dt.
-        """
-        #1. Half Kick: v(t + dt/2) = v(t) + (dt/2) * a(r(t))
-        acc = self.get_accelerations()
+        #Advances system positions and velocities by step size dt.
+        #1.Half Kick: v(t + dt/2) = v(t) + (dt/2) * a(r(t))
+        acc = self.accelerations()
         self.v += 0.5 * dt * acc
         
-        #2. Full Drift: r(t + dt) = r(t) + dt * v(t + dt/2)
+        #2.Full Drift: r(t + dt) = r(t) + dt * v(t + dt/2)
         self.r += dt * self.v
         
-        #3. Half Kick: v(t + dt) = v(t + dt/2) + (dt/2) * a(r(t + dt))
-        acc_new = self.get_accelerations()
+        #3.Half Kick: v(t + dt) = v(t + dt/2) + (dt/2) * a(r(t + dt))
+        acc_new = self.accelerations()
         self.v += 0.5 * dt * acc_new
 
     def step_yoshida4(self, dt):
@@ -109,7 +106,7 @@ class NBodySystem:
         for i in range(4):
             self.r += c[i] * dt * self.v
             if d[i] != 0.0:
-                acc = self.get_accelerations()
+                acc = self.accelerations()
                 self.v += d[i] * dt * acc
 
     def rk4step(self,dt):
@@ -118,16 +115,16 @@ class NBodySystem:
 
         #k1=dt*f(y)
         kr1 = dt*v0
-        kv1 = dt*self.get_accelerations(r0)
+        kv1 = dt*self.accelerations(r0)
         #k2 = dt*f(y+k1/2)
         kr2 = dt*(v0 + kv1/2.0)
-        kv2 = dt*self.get_accelerations(r0 + kr1/2.0)
+        kv2 = dt*self.accelerations(r0 + kr1/2.0)
         #k3= dt*f(y+k2/2)
         kr3 = dt*(v0 + kv2/2.0)
-        kv3 = dt*self.get_accelerations(r0 + kr2/2.0)
+        kv3 = dt*self.accelerations(r0 + kr2/2.0)
         #k4 = dt*f(y+k3)
         kr4 = dt*(v0 + kv3)
-        kv4 = dt*self.get_accelerations(r0 + kr3)
+        kv4 = dt*self.accelerations(r0 + kr3)
 
         #ynew = y+(k1+k4)/6.0 + (k2+k3)/3.0
         self.r = r0 +(kr1+kr4)/6.0 + (kr2+kr3)/3.0
@@ -137,7 +134,7 @@ class NBodySystem:
 
     #Helper Methods
     def shift_to_barycentric(self):
-        # Center of mass position and velocity (P = 0 frame)
+        #Center of mass position and velocity (P = 0 frame)
         M_tot = np.sum(self.m)
         r_cm = np.sum(self.m[:, np.newaxis] * self.r, axis=0) / M_tot
         v_cm = np.sum(self.m[:, np.newaxis] * self.v, axis=0) / M_tot
@@ -168,18 +165,31 @@ class NBodySystem:
 
 
 if __name__ == "__main__":
-    # 2-body Sun-Earth benchmark (e = 0.2, a = 1.0 AU, 2000 revolutions)
+    #2-body Sun-Earth test (e = 0.2, a = 1.0 AU, 2000 revolutions)
     e = 0.2
     mu = G * (1.0 + 3.04e-6)
     r_peri = 1.0 * (1.0 - e)
     v_peri = np.sqrt(mu * (1.0 + e) / r_peri)
 
+    plt.figure()
     for method in ["leapfrog", "yoshida4", "rk4"]:
         for dt in [0.01, 0.005]:
             sys = NBodySystem([1.0, 3.04e-6], [[0, 0, 0], [r_peri, 0, 0]], [[0, 0, 0], [0, v_peri, 0]])
             sys.shift_to_barycentric()
             t, r, E, L = sys.run_and_log(t_max=2000.0, dt=dt, method=method, log_interval=100)
             
+            rel_dE = np.abs((E-E[0])/E[0])
             max_dE = np.max(np.abs((E - E[0]) / E[0]))
             max_dL = np.max(np.linalg.norm(L - L[0], axis=1))
             print(f"{method:8s} | dt={dt:.4f} | max |dE/E0| = {max_dE:.3e} | max |dL| = {max_dL:.3e}")
+
+            if dt == 0.01:
+                plt.loglog(t[1:], rel_dE[1:], label=method)
+
+    plt.title('Two-Body Kepler Test')
+    plt.xlabel('Time (years)')
+    plt.ylabel('Fractional Energy Error')
+    plt.grid(True)
+    plt.legend()
+    plt.savefig('kepler_test.png')
+    plt.show()
