@@ -40,5 +40,20 @@ from engine import NBodySystem as nbs
 
 
 
-nbs("Test Sim")
+sys_4 = nbs(
+    masses= [1.0,         #sun
+             1.66e-7,   #mercury
+             2.45e-6,   #venus
+             3.04e-6,   #earth
+#             3.23e-7,   #mars
+#             9.55e-4,   #jupiter
+#             2.86e-4,   #saturn
+#             4.37e-5,   #uranus  
+#             5.15e-5    #neptune
+#             xxxxxxx    #nibiru
+    ],
+    positions=[[0,0,0],[.5,.5,.5],[1,1,1],[2,2,2]],
+    velocities=[[0,0,0],[7,7,7],[6.5,6.5,6.5],[6,6,6]]
+)
 #def system(sun,mercury,venus,earth,mars,jupiter,saturn,uranus,):
+print(sys_4.m)
