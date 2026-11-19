@@ -57,3 +57,14 @@ sys_4 = nbs(
 )
 #def system(sun,mercury,venus,earth,mars,jupiter,saturn,uranus,):
 print(sys_4.m)
+
+
+
+# ----Personal notes----
+# use jpl horizons state vectors
+# Make test plots with few objects
+# Make full plots
+# Include animation
+# Caiden: error analysis, result analysis with plots, validation, computation times/simulation time, error per year etc.
+# eccentricity stability analysis
+# Slides

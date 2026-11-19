@@ -111,3 +111,8 @@ class NBodySystem:
             if d[i] != 0.0:
                 acc = self.get_accelerations()
                 self.v += d[i] * dt * acc
+   
+   
+    #--------- Ian Run Loop ---------#
+    def run(dt,steps,method=step_yoshida4):
+        
