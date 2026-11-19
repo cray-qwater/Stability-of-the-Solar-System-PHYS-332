@@ -75,8 +75,8 @@ velocities[0] = -np.sum(np.array(masses)[1:, None] * velocities[1:], axis=0) / m
 
 sys_4 = nbs(masses=masses, positions=positions, velocities=velocities)
 
-dt    = .01  # yr (about 240 steps per Mercury orbit)
-years = 1e3
+dt    = .0001  # yr (about 240 steps per Mercury orbit)
+years = 100
 out = sys_4.run(dt, int(years / dt), method=nbs.step_yoshida4, record_every=10)
 
 # ---- Checks ----
