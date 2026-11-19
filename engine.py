@@ -114,5 +114,36 @@ class NBodySystem:
    
    
     #--------- Ian Run Loop ---------#
-    def run(dt,steps,method=step_yoshida4):
-        
+    def run(self, dt, steps, method=step_yoshida4, record_every=1):
+        """
+        Advances the system by `steps` steps of size dt using `method`
+        (e.g. NBodySystem.step_yoshida4 or NBodySystem.leapfrog).
+        Records the state every `record_every` steps, including the initial state.
+        Returns a dict of numpy arrays:
+            t (M,), r (M, N, 3), v (M, N, 3), E (M,), L (M, 3)
+        """
+        n_records = steps // record_every + 1
+        t = np.zeros(n_records)
+        r_hist = np.zeros((n_records, self.N, 3))
+        v_hist = np.zeros((n_records, self.N, 3))
+        E_hist = np.zeros(n_records)
+        L_hist = np.zeros((n_records, 3))
+
+        def record(k, time):
+            t[k] = time
+            r_hist[k] = self.r
+            v_hist[k] = self.v
+            E_hist[k] = self.total_energy()
+            L_hist[k] = self.total_angular_momentum()
+
+        record(0, 0.0)
+        k = 1
+        for step in range(1, steps + 1):
+            method(self, dt)
+            if step % max(1, steps // 100) == 0:
+                print(f"{step}/{steps}")
+            if step % record_every == 0:
+                record(k, step * dt)
+                k += 1
+
+        return {"t": t, "r": r_hist, "v": v_hist, "E": E_hist, "L": L_hist}
