@@ -24,23 +24,19 @@ class NBodySystem:
         """
         if r_pos is None:
             r_pos = self.r
-            
-        acc = np.zeros_like(r_pos)
-        
-        for i in range(self.N):
-            # Displacement vectors pointing from body i to all other bodies
-            dr = r_pos - r_pos[i]
-            dist_sq = np.sum(dr**2, axis=1)
-            
-            # Set self-distance to infinity to ignore self-interaction (i == j)
-            dist_sq[i] = np.inf
-            
-            # Inverse cube of distance: 1 / r^3
-            inv_dist_cube = dist_sq**(-1.5)
-            
-            # Sum gravitational accelerations from all other bodies
-            acc[i] = G * np.sum((self.m[:, np.newaxis] * dr) * inv_dist_cube[:, np.newaxis], axis=0)
-            
+
+        # Displacement vectors dr[i, j] = r_j - r_i, shape (N, N, 3)
+        dr = r_pos[np.newaxis, :, :] - r_pos[:, np.newaxis, :]
+        dist_sq = np.sum(dr**2, axis=-1)
+
+        # Set self-distance to infinity to ignore self-interaction (i == j)
+        np.fill_diagonal(dist_sq, np.inf)
+
+        # Weight w[i, j] = m_j / |r_j - r_i|^3
+        w = self.m[np.newaxis, :] * dist_sq**(-1.5)
+
+        # a_i = G * sum_j w[i, j] * dr[i, j]
+        acc = G * np.einsum("ij,ijk->ik", w, dr)
         return acc
 
     def total_energy(self):
@@ -114,15 +110,22 @@ class NBodySystem:
    
    
     #--------- Ian Run Loop ---------#
-    def run(self, dt, steps, method=step_yoshida4, record_every=1):
+    def run(self, dt, steps, method=step_yoshida4, record_every=1,
+            monitor=None, monitor_every=10, verbose=True):
         """
         Advances the system by `steps` steps of size dt using `method`
         (e.g. NBodySystem.step_yoshida4 or NBodySystem.leapfrog).
         Records the state every `record_every` steps, including the initial state.
+
+        monitor: optional callable monitor(system, t) -> bool, called every
+                 `monitor_every` steps. Returning True stops the run early
+                 (the stopping state is recorded and the outputs are trimmed).
+        verbose: print progress.
+
         Returns a dict of numpy arrays:
             t (M,), r (M, N, 3), v (M, N, 3), E (M,), L (M, 3)
         """
-        n_records = steps // record_every + 1
+        n_records = steps // record_every + 2   # +1 spare slot for an early-stop record
         t = np.zeros(n_records)
         r_hist = np.zeros((n_records, self.N, 3))
         v_hist = np.zeros((n_records, self.N, 3))
@@ -140,10 +143,17 @@ class NBodySystem:
         k = 1
         for step in range(1, steps + 1):
             method(self, dt)
-            if step % max(1, steps // 100) == 0:
+            if verbose and step % max(1, steps // 100) == 0:
                 print(f"{step}/{steps}")
+            recorded = False
             if step % record_every == 0:
                 record(k, step * dt)
                 k += 1
+                recorded = True
+            if monitor is not None and step % monitor_every == 0 and monitor(self, step * dt):
+                if not recorded:
+                    record(k, step * dt)
+                    k += 1
+                break
 
-        return {"t": t, "r": r_hist, "v": v_hist, "E": E_hist, "L": L_hist}
+        return {"t": t[:k], "r": r_hist[:k], "v": v_hist[:k], "E": E_hist[:k], "L": L_hist[:k]}

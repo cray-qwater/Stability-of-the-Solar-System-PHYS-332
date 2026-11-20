@@ -1,26 +1,16 @@
 from engine import NBodySystem as nbs
+from solar_system import build_system
 import numpy as np
+from paths import FIGURES
 import matplotlib.pyplot as plt
 import time  
 
 # -----------------------------------------------------------------------------
 # 9-body solar system from JPL Horizons (run Initial_Conditions.py first)
+# Names, masses (M_sun) and initial conditions live in solar_system.py
 # -----------------------------------------------------------------------------
-ic = np.load("initial_conditions.npz")   # barycentric, ecliptic frame
-names = list(ic["names"])
-masses = [1.0,        # sun
-          1.66e-7,    # mercury
-          2.45e-6,    # venus
-          3.04e-6,    # earth + moon
-          3.23e-7,    # mars
-          9.55e-4,    # jupiter
-          2.86e-4,    # saturn
-          4.37e-5,    # uranus
-          5.15e-5,    # neptune
-]                     # in solar masses
-
-# Positions in AU, velocities in AU/yr
-sys_9 = nbs(masses=masses, positions=ic["r"], velocities=ic["v"])
+# Positions in AU, velocities in AU/yr (barycentric, ecliptic frame)
+sys_9, names, masses = build_system()
 
 dt    = 0.001   # yr (about 240 steps per Mercury orbit)
 years = 200     # longer than one Neptune orbit (165 yr)
@@ -66,7 +56,7 @@ def conservation_errors(out, m):
     dP = np.linalg.norm(P - P[0], axis=1) / P_scale
     return {"Energy |ΔE/E0|": dE, "Ang. momentum |ΔL|/|L0|": dL, "Lin. momentum |ΔP|/Σ|p|": dP}
 
-errs = conservation_errors(out, np.array(masses))
+errs = conservation_errors(out, masses)
 for name, e in errs.items():
     print(f"Max {name:28s} {e.max():.3e}")
 
@@ -78,7 +68,7 @@ ax.set_xlabel("t (yr)")
 ax.set_ylabel("relative error")
 ax.set_title("Conservation errors (Yoshida 4)")
 ax.legend()
-plt.savefig("conservation_errors.png", dpi=150)
+plt.savefig(FIGURES / "conservation_errors.png", dpi=150)
 
 # ---- Plots ----
 fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(18, 5.5), layout="constrained")
@@ -103,7 +93,7 @@ ax3.set_xlabel("t (yr)")
 ax3.set_ylabel("|ΔE / E0|")
 ax3.set_title("Energy error (Yoshida 4)")
 
-plt.savefig("solar_system_9body.png", dpi=150)
+plt.savefig(FIGURES / "solar_system_9body.png", dpi=150)
 
 # ----Ian Personal notes----
 # use jpl horizons state vectors

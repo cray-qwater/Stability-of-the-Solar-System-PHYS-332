@@ -1,2 +1,6 @@
-
 venv/
+__pycache__/
+
+# Large generated files (regenerate with src/nibiru_sweep.py and src/animate.py)
+outputs/animations/*.mp4
+data/nibiru_myth_run.npz

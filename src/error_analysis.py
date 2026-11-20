@@ -1,27 +1,23 @@
-import io, contextlib
 import numpy as np
+from paths import FIGURES
 import matplotlib.pyplot as plt
 from engine import NBodySystem as nbs
-
-ic = np.load("initial_conditions.npz")
-names = list(ic["names"])
-masses = [1.0, 1.66e-7, 2.45e-6, 3.04e-6, 3.23e-7, 9.55e-4, 2.86e-4, 4.37e-5, 5.15e-5]
+from solar_system import build_system, NAMES as names
 
 def make_system():
     """Always build a fresh system: run() mutates the state in place."""
-    return nbs(masses=masses, positions=ic["r"], velocities=ic["v"])
+    return build_system()[0]
 
 def run_quiet(dt, years, method=nbs.step_yoshida4, sample_dt=0.04):
     """
     Run and record at fixed PHYSICAL sample times (every sample_dt years), so runs with
     different dt produce arrays of the same shape and can be compared sample by sample.
-    sample_dt must be a multiple of dt. Suppresses the progress printing.
+    sample_dt must be a multiple of dt.
     """
     every = int(round(sample_dt / dt))
     assert abs(every * dt - sample_dt) < 1e-12, "sample_dt must be a multiple of dt"
     steps = int(round(years / dt))
-    with contextlib.redirect_stdout(io.StringIO()):
-        return make_system().run(dt, steps, method=method, record_every=every)
+    return make_system().run(dt, steps, method=method, record_every=every, verbose=False)
     
 def max_energy_error(out):
     E = out["E"]
@@ -42,7 +38,7 @@ ax.set_xlabel("dt (yr)")
 ax.set_ylabel("max |ΔE/E0| over run")
 ax.set_title(f"Convergence test, {years} yr (dashed = ideal slope)")
 ax.legend()
-plt.savefig("convergence.png", dpi=150)
+plt.savefig(FIGURES / "convergence.png", dpi=150)
 
 years  = 20
 dt     = 0.001
@@ -65,4 +61,4 @@ for ax in (ax1, ax2):
     ax.set_xlabel("t (yr)")
 ax1.set_title(f"Error vs reference (dt={dt} vs {dt_ref})")
 ax1.legend(ncol=2)
-plt.savefig("position_error.png", dpi=150)
+plt.savefig(FIGURES / "position_error.png", dpi=150)
