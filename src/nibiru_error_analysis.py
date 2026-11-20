@@ -75,47 +75,55 @@ def convergence(extra_years):
                  for k, o in res["orbits"].items())
         print(f"{dt:>9g} {res['outcome']:>10s} {max_dE[dt]:>12.2e} {pos_err[dt][1][-1]:>14.2e} {da:>12.2e}")
 
-    # ---- figure ----
-    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(18, 5), layout="constrained")
+    # ---- figures: three separate files ----
+    def save(fig, name):
+        fig.savefig(FIGURES / name, dpi=150)
+        plt.close(fig)
+        print(f"saved outputs/figures/{name}")
 
-    # (a) conservation for the dt used in the sweep
+    sub = f"Myth Nibiru, Yoshida 4, passage + {extra_years:g} yr"
+
+    # (1) Conservation for the dt used in the sweep
     h = runs[DT_USED]["history"]
     dE = np.abs((h["E"] - h["E"][0]) / h["E"][0])
     dL = np.linalg.norm(h["L"] - h["L"][0], axis=1) / np.linalg.norm(h["L"][0])
-    ax1.semilogy(h["t"][1:], np.maximum(dE[1:], 1e-17), label="|ΔE/E0|")
-    ax1.semilogy(h["t"][1:], np.maximum(dL[1:], 1e-17), label="|ΔL|/|L0|")
-    ax1.axvline(t_peri, color="gray", ls=":", label="Nibiru perihelion")
-    ax1.set_xlabel("t (yr)")
-    ax1.set_ylabel("relative error")
-    ax1.set_title(f"Conservation, dt = {DT_USED}")
-    ax1.legend()
 
-    # (b) energy error vs dt, with ideal 4th-order slope
+    fig, ax = plt.subplots(figsize=(7, 5), layout="constrained")
+    ax.semilogy(h["t"][1:], np.maximum(dE[1:], 1e-17), label="|ΔE/E0|")
+    ax.semilogy(h["t"][1:], np.maximum(dL[1:], 1e-17), label="|ΔL|/|L0|")
+    ax.axvline(t_peri, color="gray", ls=":", label="Nibiru perihelion")
+    ax.set_xlabel("t (yr)")
+    ax.set_ylabel("relative error")
+    ax.set_title(f"Conservation during Nibiru passage (dt = {DT_USED})\n{sub}")
+    ax.legend()
+    save(fig, "nibiru_conservation.png")
+
+    # (2) Energy error vs dt, with ideal 4th-order slope
     dts = np.array(DTS)
     errs = np.array([max_dE[dt] for dt in DTS])
     slope = np.polyfit(np.log(dts), np.log(errs), 1)[0]
-    ax2.loglog(dts, errs, "o-", label=f"measured (slope {slope:.1f})")
-    ax2.loglog(dts, errs[0] * (dts / dts[0])**4, "k--", alpha=0.4, label="ideal slope 4")
-    ax2.set_xlabel("dt (yr)")
-    ax2.set_ylabel("max |ΔE/E0| over run")
-    ax2.set_title("Convergence of energy error")
-    ax2.legend()
+
+    fig, ax = plt.subplots(figsize=(7, 5), layout="constrained")
+    ax.loglog(dts, errs, "o-", label=f"measured (slope {slope:.1f})")
+    ax.loglog(dts, errs[0] * (dts / dts[0])**4, "k--", alpha=0.4, label="ideal slope 4")
+    ax.set_xlabel("dt (yr)")
+    ax.set_ylabel("max |ΔE/E0| over run")
+    ax.set_title(f"Convergence of energy error\n{sub}")
+    ax.legend()
+    save(fig, "nibiru_energy_convergence.png")
     print(f"\nMeasured energy-error order ≈ {slope:.2f} (Yoshida 4: expect ~4)")
 
-    # (c) position error of each dt vs the reference
+    # (3) Position error of each dt vs the reference
+    fig, ax = plt.subplots(figsize=(7, 5), layout="constrained")
     for dt in DTS[:-1]:
         t, e = pos_err[dt]
-        ax3.semilogy(t[1:], np.maximum(e[1:], 1e-17), label=f"dt = {dt:g}")
-    ax3.axvline(t_peri, color="gray", ls=":", label="Nibiru perihelion")
-    ax3.set_xlabel("t (yr)")
-    ax3.set_ylabel("worst planet: position error / orbital radius")
-    ax3.set_title(f"Position error vs reference (dt = {DTS[-1]:g})")
-    ax3.legend()
-
-    fig.suptitle(f"Myth Nibiru error analysis (Yoshida 4, passage + {extra_years:g} yr)")
-    plt.savefig(FIGURES / "nibiru_error_analysis.png", dpi=150)
-    plt.close(fig)
-    print("saved outputs/figures/nibiru_error_analysis.png")
+        ax.semilogy(t[1:], np.maximum(e[1:], 1e-17), label=f"dt = {dt:g}")
+    ax.axvline(t_peri, color="gray", ls=":", label="Nibiru perihelion")
+    ax.set_xlabel("t (yr)")
+    ax.set_ylabel("worst planet: position error / orbital radius")
+    ax.set_title(f"Position error vs reference (dt = {DTS[-1]:g})\n{sub}")
+    ax.legend()
+    save(fig, "nibiru_position_error.png")
 
 
 # -----------------------------------------------------------------------------
