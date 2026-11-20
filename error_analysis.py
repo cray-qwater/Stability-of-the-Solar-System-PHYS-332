@@ -6,7 +6,6 @@ from engine import NBodySystem as nbs
 ic = np.load("initial_conditions.npz")
 names = list(ic["names"])
 masses = [1.0, 1.66e-7, 2.45e-6, 3.04e-6, 3.23e-7, 9.55e-4, 2.86e-4, 4.37e-5, 5.15e-5]
-# (when you add Nibiru: append to masses/positions/velocities/names here and nothing else changes)
 
 def make_system():
     """Always build a fresh system: run() mutates the state in place."""
@@ -47,7 +46,7 @@ plt.savefig("convergence.png", dpi=150)
 
 years  = 20
 dt     = 0.001
-dt_ref = 0.00025            # ~80k steps; a couple of minutes. Reduce `years` if too slow.
+dt_ref = 0.00025
 
 out     = run_quiet(dt, years)
 out_ref = run_quiet(dt_ref, years)

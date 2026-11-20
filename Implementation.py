@@ -1,6 +1,7 @@
 from engine import NBodySystem as nbs
 import numpy as np
 import matplotlib.pyplot as plt
+import time  
 
 # -----------------------------------------------------------------------------
 # 9-body solar system from JPL Horizons (run Initial_Conditions.py first)
@@ -23,7 +24,20 @@ sys_9 = nbs(masses=masses, positions=ic["r"], velocities=ic["v"])
 
 dt    = 0.001   # yr (about 240 steps per Mercury orbit)
 years = 200     # longer than one Neptune orbit (165 yr)
-out = sys_9.run(dt, int(years / dt), method=nbs.step_yoshida4, record_every=37)   # 37 so samples don't repeat at the same spots each orbit
+
+# Setup for timing the simulation
+n_steps = int(years / dt)
+t_start = time.perf_counter()
+
+# Main simulation run
+out = sys_9.run(dt, n_steps, method=nbs.step_yoshida4, record_every=37)   # 37 so samples don't repeat at the same spots each orbit
+
+# Simulation timing
+wall_time = time.perf_counter() - t_start
+print(f"Computation time: {wall_time:.2f} s ({wall_time / 60:.2f} min)")
+print(f"  {1e3 * wall_time / n_steps:.3f} ms per step | "
+      f"{wall_time / years:.3f} s per simulated year | "
+      f"{years / wall_time:.2f} simulated yr per second")
 
 # ---- Checks ----
 E0, L0 = out["E"][0], out["L"][0]
@@ -100,13 +114,11 @@ plt.savefig("solar_system_9body.png", dpi=150)
 
 # ---- Caiden Workspace ----
 
-# Error Analysis
-
 # Result Analysis with Plots
 
 # Validation
 
-# Computation times/Simulation time
+'''Computation times/Simulation time: MOSTLY DONE'''
 
 # 3d probability sampling with mass/velocity/radial distance
 
