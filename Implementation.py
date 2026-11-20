@@ -40,6 +40,32 @@ for i in range(1, 9):
     T_sim = 2 * np.pi * out["t"][-1] / abs(angle[-1] - angle[0])
     print(f"{names[i]:8s} period {T_sim:8.3f} yr (known: {T_known[i-1]:7.3f} yr)")
 
+# Conservation Error Checks (It adds total linear momentum, which should stay constant in the barycentric frame)
+def conservation_errors(out, m):
+    """Relative drift of energy, angular momentum, and linear momentum."""
+    E, L = out["E"], out["L"]
+    dE = np.abs((E - E[0]) / E[0])
+    dL = np.linalg.norm(L - L[0], axis=1) / np.linalg.norm(L[0])
+
+    P = np.einsum("i,tij->tj", m, out["v"])                    # total momentum (M, 3)
+    P_scale = np.sum(m * np.linalg.norm(out["v"][0], axis=1))  # sum of |p_i| at t=0
+    dP = np.linalg.norm(P - P[0], axis=1) / P_scale
+    return {"Energy |ΔE/E0|": dE, "Ang. momentum |ΔL|/|L0|": dL, "Lin. momentum |ΔP|/Σ|p|": dP}
+
+errs = conservation_errors(out, np.array(masses))
+for name, e in errs.items():
+    print(f"Max {name:28s} {e.max():.3e}")
+
+fig, ax = plt.subplots(figsize=(9, 5), layout="constrained")
+for name, e in errs.items():
+    ax.semilogy(out["t"][1:], np.maximum(e[1:], 1e-17), label=name)   # floor avoids log(0)
+ax.axhline(np.finfo(float).eps, color="gray", ls=":", label="machine epsilon")
+ax.set_xlabel("t (yr)")
+ax.set_ylabel("relative error")
+ax.set_title("Conservation errors (Yoshida 4)")
+ax.legend()
+plt.savefig("conservation_errors.png", dpi=150)
+
 # ---- Plots ----
 fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(18, 5.5), layout="constrained")
 
@@ -65,11 +91,25 @@ ax3.set_title("Energy error (Yoshida 4)")
 
 plt.savefig("solar_system_9body.png", dpi=150)
 
-# ----Personal notes----
+# ----Ian Personal notes----
 # use jpl horizons state vectors
 # Make test plots with few objects
 # Make full plots
 # Include animation
-# Caiden: error analysis, result analysis with plots, validation, computation times/simulation time, 3d probability sampling with mass/velocity/radial distance? Find most unstable values(within bounds?).
-# eccentricity stability analysis
 # slides
+
+# ---- Caiden Workspace ----
+
+# Error Analysis
+
+# Result Analysis with Plots
+
+# Validation
+
+# Computation times/Simulation time
+
+# 3d probability sampling with mass/velocity/radial distance
+
+# Find most unstable values(within bounds?).
+
+# Eccentricity Stability analysis
