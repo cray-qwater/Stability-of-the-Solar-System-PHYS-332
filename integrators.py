@@ -71,10 +71,7 @@ class NBodySystem:
         return T + V
     
     def get_L(self):
-        """
-        Calculates total angular momentum vector L = sum(m_i * (r_i x v_i)).
-        Symplectic integrators conserve this vector to machine precision.
-        """
+        #just calculates the total angular momentum: L = sum(m_i * (r_i x v_i)).
         #np.cross operates along axis=-1 (the 3D Cartesian coordinates)
         L_individual = self.m[:, np.newaxis] * np.cross(self.r, self.v)
         return np.sum(L_individual, axis=0)
@@ -94,8 +91,9 @@ class NBodySystem:
         Composes sub-steps using exact coefficients derived from 2^(1/3).
         """
         #Base constant from 2^(1/3)
-        w1 = 1.0 / (2.0 - 2.0**(1.0/3.0))
-        w0 = - (2.0**(1.0/3.0)) / (2.0 - 2.0**(1.0/3.0))
+        beta = 2.0**(1.0/3.0)
+        w1 = 1.0 / (2.0 - beta)
+        w0 = - (beta) / (2.0 - beta)
         
         #Drift coefficients c_i and kick coefficients d_i
         c = np.array([w1 / 2.0, (w0 + w1) / 2.0, (w0 + w1) / 2.0, w1 / 2.0])
@@ -131,10 +129,9 @@ class NBodySystem:
         self.v = v0 +(kv1+kv4)/6.0 + (kv2+kv3)/3.0
 
 
-
     #Helper Methods
     def com_frame(self):
-        #Center of mass position and velocity (P = 0 frame)
+        #center of mass position and velocity (P = 0 frame)
         M_tot = np.sum(self.m)
         r_cm = np.sum(self.m[:, np.newaxis] * self.r, axis=0) / M_tot
         v_cm = np.sum(self.m[:, np.newaxis] * self.v, axis=0) / M_tot
@@ -176,12 +173,15 @@ if __name__ == "__main__":
     print('Two-Body Kepler Test:')
     print('Method\t\tdt\tMax dE/E0\tmax dL')
 
+    #I want it in specific colors
+    colors = {'rk4': 'black', 'leapfrog': 'tab:blue', 'yoshida4': 'tab:orange'}
+
     plt.figure()
-    for method in ['leapfrog', 'yoshida4', 'rk4']:
+    for method in ['rk4', 'leapfrog', 'yoshida4']:
         for dt in [0.01, 0.005]:
             sys = NBodySystem([1.0, 3.04e-6], [[0, 0, 0], [r_peri, 0, 0]], [[0, 0, 0], [0, v_peri, 0]])
             sys.com_frame()
-            t, r, E, L = sys.integrate(t_max=2000.0, dt=dt, method=method, log_interval=100)
+            t, r, E, L = sys.integrate(t_max=2000.0, dt=dt, method=method, log_interval=23)
 
             rel_dE = np.abs((E - E[0]) / E[0])
             max_dE = np.max(rel_dE)
@@ -189,20 +189,35 @@ if __name__ == "__main__":
             print(f"{method:8s}\t{dt}\t{max_dE:.3e}\t{max_dL:.3e}")
 
             if dt == 0.01:
-                plt.loglog(t[1:], rel_dE[1:], label=method)
+                plt.loglog(t[1:], rel_dE[1:], color=colors[method], label=method)
 
-    plt.title('Two-Body Kepler Test')
+    plt.title('Two-Body Kepler Test: Energy')
     plt.xlabel('Time (years)')
-    plt.ylabel('Fractional Energy Error')
+    plt.ylabel('Relative Energy Error')
     plt.grid(True)
     plt.legend()
     plt.savefig('kepler_test.png')
+    plt.figure(figsize=(8, 4.5))
+    for method in ['rk4', 'leapfrog', 'yoshida4']:
+        sys = NBodySystem([1.0, 3.04e-6], [[0, 0, 0], [r_peri, 0, 0]], [[0, 0, 0], [0, v_peri, 0]])
+        sys.com_frame()
+        t, r, E, L = sys.integrate(t_max=2000.0, dt=0.01, method=method, log_interval=23)
+        dL = np.linalg.norm(L - L[0], axis=1)
+        plt.loglog(t[1:], dL[1:], color =colors[method], label=method)
+
+    plt.title('Two-Body Kepler Test: Angular Momentum Error')
+    plt.xlabel('Time (years)')
+    plt.ylabel(r'Error $|\Delta \mathbf{L}|$')
+    plt.grid(True)
+    plt.legend()
+    plt.savefig('kepler_dL.png', dpi=300)
+    
     print('\nNibiru Flyby Step-Size Sweep:')
     print('dt\tMax dE/E0')
-    m_earth = 3.04e-6
+    massEarth = 3.04e-6
     for dt in [0.01, 0.0075, 0.005, 0.0025, 0.001]:
         sys = NBodySystem(
-            [1.0, m_earth, 10.0 * m_earth],
+            [1.0, massEarth, 10.0 * massEarth],
             [[0, 0, 0], [1.0, 0, 0], [-15.0, 0.5, 0]],
             [[0, 0, 0], [0, 2 * np.pi, 0], [6.0, 0, 0]]
         )
@@ -210,3 +225,5 @@ if __name__ == "__main__":
         t, r, E, L = sys.integrate(t_max=6.0, dt=dt, method='yoshida4', log_interval=10)
         print(f"{dt}\t{np.max(np.abs((E - E[0]) / E[0])):.3e}")
     plt.show()
+
+    
