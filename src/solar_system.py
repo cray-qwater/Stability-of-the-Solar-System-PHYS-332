@@ -1,14 +1,12 @@
-"""
-Single source of truth for the solar-system setup: body names, masses, JPL initial
-conditions, and helpers to insert a hypothetical extra body ("Nibiru") from orbital
-elements. Units: AU, M_sun, yr (G = 4 pi^2).
-"""
+# Single source of truth for the solar-system setup: body names, masses, JPL initial conditions,
+# and helpers to insert a hypothetical extra body "Nibiru" from orbital elements. 
+# Units: AU, M_sun, yr (G = 4 pi^2).
+
 import numpy as np
 from paths import DATA
 from engine import NBodySystem, G
 
-NAMES = ["Sun", "Mercury", "Venus", "Earth", "Mars",
-         "Jupiter", "Saturn", "Uranus", "Neptune"]
+NAMES = ["Sun", "Mercury", "Venus", "Earth", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune"]
 MASSES = [1.0,        # sun
           1.66e-7,    # mercury
           2.45e-6,    # venus
